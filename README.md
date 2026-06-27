@@ -1,20 +1,96 @@
-
 # DGR — Tool-call guard for AI agents
 
-Stop maintaining the same tool-call wrapper in every AI project.
+Stop writing the same tool-call wrapper in every AI project.
 
-DGR is a tiny local deterministic SDK that checks risky AI tool actions before execution.
+DGR is a small local deterministic SDK that checks risky AI tool actions before execution.
+
+It helps decide whether a tool action should be:
+
+- allowed
+- blocked
+- sent for human approval
+- clarified before execution
+- allowed only under safe conditions
 
 No cloud.
 No dashboard.
 No AI reasoning.
-No enterprise platform.
+No workflow engine.
 
-Just one reusable decision layer:
+Just:
 
-```ts
-const decision = check(action);
-```
+    const decision = check(action);
+
+---
+
+## Install
+
+Until the npm package is published, install directly from GitHub:
+
+    npm install github:miheii/dgr
+
+After npm publication, installation will be:
+
+    npm install @dgr/core
+
+---
+
+## Requirements
+
+- Node.js 22+
+- npm
+- ESM import support
+
+---
+
+## Quick start
+
+Create `test.mjs`:
+
+    import { check } from "@dgr/core";
+
+    const action = {
+      tool_name: "email",
+      action_type: "send_email",
+      mode: "execute",
+      environment: "production",
+      scope: "single",
+      target: "customer@example.com",
+      tool_trust: "trusted",
+      reversibility: "irreversible",
+      effects: {
+        external_effect: true,
+        data_change: false,
+        money_movement: false,
+        permission_change: false,
+        production_impact: false,
+        customer_facing: true,
+        public_visibility: false
+      }
+    };
+
+    const decision = check(action);
+
+    console.log(decision);
+
+Run:
+
+    node test.mjs
+
+Expected result:
+
+    {
+      decision: "REQUIRE_HUMAN_APPROVAL",
+      allowed: false,
+      risk_level: "high",
+      reason: "External communication requires human approval before execution."
+    }
+
+That is DGR.
+
+One normalized action in.
+
+One deterministic decision out.
 
 ---
 
@@ -24,11 +100,9 @@ Every AI agent project eventually grows a wrapper around tool calls.
 
 At first it is small:
 
-```ts
-if (toolName === "send_email") {
-    requireApproval();
-}
-```
+    if (toolName === "send_email") {
+      requireApproval();
+    }
 
 Then more tools appear.
 
@@ -42,29 +116,17 @@ Then someone adds database writes.
 
 Then MCP tools arrive.
 
-And suddenly every project contains dozens of repeated decision checks.
+And suddenly every project contains repeated decision logic:
 
-Typical wrapper logic starts looking like this:
-
-```ts
-if (targetMissing) askClarification();
-
-if (toolDenied) block();
-
-if (externalSend) requireApproval();
-
-if (destructiveAction) requireApproval();
-
-if (productionChange) requireApproval();
-
-if (moneyMovement) requireApproval();
-
-if (permissionChange) requireApproval();
-
-if (dryRun) allowConditionally();
-
-auditDecision();
-```
+    if (targetMissing) askClarification();
+    if (toolDenied) block();
+    if (externalSend) requireApproval();
+    if (destructiveAction) requireApproval();
+    if (productionChange) requireApproval();
+    if (moneyMovement) requireApproval();
+    if (permissionChange) requireApproval();
+    if (dryRun) allowConditionally();
+    auditDecision();
 
 The framework changes.
 
@@ -76,369 +138,247 @@ DGR extracts that repeated decision logic into one deterministic SDK.
 
 ---
 
-## The core idea
+## Before DGR
 
-```ts
-const decision = check(action);
-```
-
-DGR receives one normalized action and returns one deterministic decision.
-
-Possible decisions:
-
-- ALLOW
-- BLOCK
-- ASK_CLARIFICATION
-- CONDITIONAL_ALLOW
-- REQUIRE_HUMAN_APPROVAL
-
-You keep your framework.
-
-You keep your tools.
-
-You keep your approval UI.
-
-You only stop rewriting the same decision logic.
-
----
-
-## Design philosophy
-
-DGR is intentionally small.
-
-It does not execute tools.
-
-It does not replace your framework.
-
-It does not become an agent.
-
-It does not make business decisions.
-
-It only determines whether a tool action is ready to execute safely.
-
-
-# DGR — Tool-call guard for AI agents
-
-Stop writing the same tool-call wrapper in every AI project.
-
-DGR is a tiny deterministic SDK that evaluates AI tool actions before execution.
-
-It helps AI applications decide whether an action should:
-
-- execute immediately;
-- require human approval;
-- ask for clarification;
-- execute only under specific conditions;
-- be blocked completely.
-
-DGR is intentionally small.
-
-It is not an AI framework.
-
-It is not an agent.
-
-It is not an orchestration platform.
-
-It is one reusable decision layer.
-
----
-
-# Why DGR?
-
-Every AI application eventually implements the same logic.
-
-Before executing a tool call it asks questions like:
-
-- Can this action execute?
-- Is human approval required?
-- Is important information missing?
-- Is this action destructive?
-- Is production affected?
-- Is this an external customer action?
-
-Developers rewrite this logic repeatedly.
-
-Different frameworks.
-
-Different tools.
-
-Different wrappers.
-
-The same decisions.
-
-DGR extracts this repeated logic into one deterministic SDK.
-
----
-
-# Before DGR
-
-```ts
-if (tool === "send_email") {
-    if (!userConfirmed) {
-        return "require approval";
+    if (tool === "send_email") {
+      if (!userConfirmed) {
+        return requireApproval();
+      }
     }
-}
 
-if (tool === "delete_database") {
-    if (!scopeSpecified) {
-        return "ask clarification";
+    if (tool === "delete_database") {
+      if (!scopeSpecified) {
+        return askClarification();
+      }
+
+      return requireApproval();
     }
-}
 
-if (tool === "refund") {
-    if (amount > 0) {
-        return "require approval";
+    if (tool === "refund") {
+      if (amount > 0) {
+        return requireApproval();
+      }
     }
-}
 
-// hundreds of similar rules...
-```
+    if (tool === "grant_admin") {
+      return requireApproval();
+    }
+
+    auditDecision();
 
 ---
 
-# After DGR
+## After DGR
 
-```ts
-import { check } from "@dgr/core";
+    import { check } from "@dgr/core";
 
-const decision = check(action);
+    const decision = check(action);
 
-switch (decision.outcome) {
-    case "ALLOW":
+    switch (decision.decision) {
+      case "ALLOW":
+        execute();
         break;
 
-    case "CONDITIONAL_ALLOW":
+      case "CONDITIONAL_ALLOW":
+        executeSafely();
         break;
 
-    case "ASK_CLARIFICATION":
+      case "ASK_CLARIFICATION":
+        askUser(decision.missing_information);
         break;
 
-    case "REQUIRE_HUMAN_APPROVAL":
+      case "REQUIRE_HUMAN_APPROVAL":
+        requestApproval(decision.reason);
         break;
 
-    case "BLOCK":
+      case "BLOCK":
+        stop(decision.reason);
         break;
-}
-```
+    }
 
-One function.
+Same behavior.
 
-One deterministic decision.
+Less repeated code.
 
-Reusable everywhere.
-
+Portable across projects.
 
 ---
 
-# Installation
+## Decision outcomes
 
-```bash
-npm install @dgr/core
-```
+DGR returns one of five stable decisions.
 
----
-
-# Quick start
-
-```ts
-import { check } from "@dgr/core";
-
-const action = {
-    type: "SEND_EMAIL",
-    recipient: "customer@example.com"
-};
-
-const decision = check(action);
-
-console.log(decision.outcome);
-```
+| Decision | Meaning |
+|---|---|
+| ALLOW | The action can execute immediately |
+| CONDITIONAL_ALLOW | The action can execute only under safe conditions |
+| ASK_CLARIFICATION | Required information is missing |
+| REQUIRE_HUMAN_APPROVAL | Human approval is required before execution |
+| BLOCK | The action must not execute |
 
 ---
 
-# Five possible outcomes
+## Action shape
 
-Every action resolves to exactly one outcome.
+DGR evaluates normalized action metadata.
 
-| Outcome | Meaning |
-|---------|---------|
-| ALLOW | Execute immediately |
-| CONDITIONAL_ALLOW | Execute only if additional conditions are satisfied |
-| ASK_CLARIFICATION | More information is required |
-| REQUIRE_HUMAN_APPROVAL | Human confirmation is required |
-| BLOCK | Execution must not continue |
+Minimum practical action:
 
-These outcomes remain stable across every supported framework.
+    {
+      tool_name: "email",
+      action_type: "send_email",
+      mode: "execute",
+      environment: "production",
+      scope: "single",
+      target: "customer@example.com",
+      tool_trust: "trusted",
+      reversibility: "irreversible",
+      effects: {
+        external_effect: true,
+        data_change: false,
+        money_movement: false,
+        permission_change: false,
+        production_impact: false,
+        customer_facing: true,
+        public_visibility: false
+      }
+    }
 
----
+DGR does not execute the action.
 
-# Examples
-
-DGR already includes examples for common AI tool actions.
-
-- Bulk email
-- WhatsApp broadcast
-- Customer refund
-- Database delete
-- Production deployment
-- Admin permission changes
-
-The goal is simple:
-
-Replace hundreds of lines of repeated wrapper logic with one deterministic decision engine.
-
+It only evaluates whether execution should continue.
 
 ---
 
-# Design goals
+## What DGR checks
 
-DGR is intentionally opinionated.
+Current core policies cover common risky action patterns:
 
-Its design follows a few simple principles.
-
-## Deterministic
-
-The same input should always produce the same decision.
-
-No randomness.
-
-No hidden reasoning.
-
----
-
-## Local first
-
-DGR works entirely offline.
-
-The core should never require:
-
-- cloud services
-- hosted APIs
-- user accounts
-- dashboards
-- databases
+- missing target
+- unknown destructive scope
+- tool allowlist
+- tool denylist
+- external communication
+- destructive actions
+- production impact
+- money movement
+- permission changes
+- customer-facing actions
+- public visibility
+- draft mode
+- dry-run mode
+- sandbox mode
+- untrusted tools
+- audit metadata
 
 ---
 
-## Framework agnostic
+## Run locally
 
-DGR belongs to no specific ecosystem.
+Clone the repository:
 
-The core is independent.
+    git clone https://github.com/miheii/dgr.git
 
-Adapters may exist for:
+Enter the project:
 
-- AI SDK
-- FastMCP
-- LangChain
-- n8n
+    cd dgr
 
----
+Install dependencies:
 
-## Transparent
+    npm install
 
-Every decision should be explainable.
+Run tests:
 
-If DGR blocks an action, developers should know why.
+    npm test
 
-If DGR asks for clarification, developers should know what information is missing.
+Build:
 
-If DGR requires approval, developers should know what triggered it.
+    npm run build
 
----
+Verify package:
 
-## Small core
+    npm pack --dry-run
 
-The core should stay small forever.
+Expected:
 
-Everything else belongs outside the core:
-
-- adapters
-- integrations
-- documentation
-- migration guides
-- examples
-
-The value of DGR comes from clarity, not size.
-
+    RESULT: 10/10
+    RESULT: 5/5
 
 ---
 
-# Roadmap
+## What DGR is not
 
-The initial goal of DGR is deliberately narrow.
+DGR is not:
 
-## Phase 1
+- an AI agent
+- an AI framework
+- a workflow engine
+- an approval UI
+- a dashboard
+- a cloud service
+- an identity provider
+- an enterprise policy platform
 
-Build a deterministic tool-call decision layer.
-
-Completed:
-
-- Deterministic policy engine
-- Local SDK
-- Smoke tests
-- Wrapper replacement demo
-- Standalone project
-- npm packaging
-- Documentation
+DGR is only the reusable decision layer before tool execution.
 
 ---
 
-## Phase 2
+## Design principles
 
-Improve developer experience.
+DGR Core is:
 
-Planned:
+- local first
+- deterministic
+- framework agnostic
+- small
+- testable
+- explainable
+- easy to remove
 
-- explain()
-- inspectAction()
-- Shadow Mode
-- Better diagnostics
-- Additional examples
+The same input should produce the same decision.
 
----
+No hidden network calls.
 
-## Phase 3
-
-Framework adapters.
-
-Potential adapters include:
-
-- AI SDK
-- FastMCP
-- LangChain
-- n8n
-
-Adapters extend DGR.
-
-They do not change the core.
+No LLM reasoning inside Core.
 
 ---
 
-# Philosophy
+## Current status
 
-DGR should never become a general AI platform.
+DGR v0.1.0 is an early standalone release.
 
-It should never become an autonomous agent.
+Confirmed:
 
-It should never replace developer judgment.
-
-Its only responsibility is to evaluate whether an AI tool action is ready to execute.
-
-Nothing more.
-
-Nothing less.
-
----
-
-# License
-
-MIT
+- local tests pass
+- wrapper replacement demo passes
+- TypeScript build works
+- npm package builds
+- GitHub install works
+- GitHub Actions CI passes
 
 ---
 
-# Contributing
+## Roadmap
 
-Contributions are welcome.
+Near-term:
+
+- improve examples
+- add explain()
+- add inspectAction()
+- add Shadow Mode
+- add AI SDK adapter
+- add FastMCP adapter
+
+Later:
+
+- LangChain adapter
+- n8n node
+- DGR Doctor
+- commercial audit layer
+
+---
+
+## Contributing
 
 Please read:
 
@@ -451,23 +391,6 @@ before opening a pull request.
 
 ---
 
-# The vision
+## License
 
-Success is not measured by the number of features.
-
-Success is measured by one simple outcome:
-
-A developer deletes a custom tool-call wrapper,
-
-installs DGR,
-
-writes:
-
-```ts
-const decision = check(action);
-```
-
-and never has to rewrite that decision logic again.
-
-That is the vision.
-
+MIT
