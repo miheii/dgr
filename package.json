@@ -20,7 +20,8 @@
   "scripts": {
     "build": "tsc",
     "test": "node tests/dgr_core_smoke.mjs && node examples/dgr_wrapper_replacement_demo.mjs",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "prepare": "npm run build"
   },
   "license": "MIT",
   "private": true,
