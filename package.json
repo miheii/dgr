@@ -1,0 +1,30 @@
+{
+  "name": "@dgr/core",
+  "version": "0.1.0",
+  "description": "Tool-call guard for AI agents",
+  "type": "module",
+  "main": "./dist/core/index.js",
+  "types": "./dist/core/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "node tests/dgr_core_smoke.mjs && node examples/dgr_wrapper_replacement_demo.mjs",
+    "prepack": "npm run build"
+  },
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "typescript": "latest"
+  }
+}
